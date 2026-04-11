@@ -1,0 +1,32 @@
+---
+- name: Azure Fleet System Audit
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Gather specific hardware facts
+      ansible.builtin.setup:
+        filter:
+          - 'ansible_mounts'
+          - 'ansible_memfree_mb'
+          - 'ansible_memtotal_mb'
+
+    - name: Display Disk Usage for Root Partition
+      ansible.builtin.debug:
+        msg: 
+          - "Host: {{ ansible_hostname }}"
+          - "Total RAM: {{ ansible_memtotal_mb }} MB"
+          - "Free RAM: {{ ansible_memfree_mb }} MB"
+          - "Disk Usage: {{ (item.size_total - item.size_available) / item.size_total * 100 | round(1) }}% used"
+      loop: "{{ ansible_mounts }}"
+      when: item.mount == "/"
+
+    - name: Check if a Reboot is Required
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+
+    - name: Alert if Reboot is needed
+      ansible.builtin.debug:
+        msg: "WARNING: {{ ansible_hostname }} requires a reboot for updates!"
+      when: reboot_required_file.stat.exists
