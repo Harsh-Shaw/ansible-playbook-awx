@@ -1,0 +1,25 @@
+---
+- name: Deploy Private Key to Client 2
+  hosts: client2
+  become: yes
+  vars:
+    key_path: "/home/azureuser/client2_key.pem"
+
+  tasks:
+    - name: Copy private key file to Client 2
+      ansible.builtin.copy:
+        src: ./client2_key.pem  # This looks for the file in your GitHub/Project folder
+        dest: "{{ key_path }}"
+        owner: azureuser
+        group: azureuser
+        mode: '0400'            # Critical: Only the owner can read it
+
+    - name: Verify file exists and permissions are correct
+      ansible.builtin.stat:
+        path: "{{ key_path }}"
+      register: key_stat
+
+    - name: Report Status
+      ansible.builtin.debug:
+        msg: "Key deployed successfully to {{ key_path }} with correct permissions."
+      when: key_stat.stat.exists
